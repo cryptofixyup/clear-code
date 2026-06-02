@@ -46,6 +46,13 @@ export interface EventPayload {
   source?: string & tags.MinLength<1> & tags.MaxLength<32>;
 }
 
+// Multi-region sync payload — a remote node's full per-metric, per-node state.
+// metrics: { [metricName]: { [nodeId]: count } }. Counts are monotonic uint32.
+export interface SyncPayload {
+  nodeId: string & tags.MinLength<1> & tags.MaxLength<64>;
+  metrics: Record<string, Record<string, number & tags.Type<'uint32'> & tags.Minimum<0>>>;
+}
+
 // ---------------------------------------------------------------------------
 // Compiled validators — these are replaced at build time with optimized code
 // ---------------------------------------------------------------------------
@@ -58,3 +65,5 @@ export const assertEdgeAuthToken  = typia.createAssert<EdgeAuthToken>();
 export const validateEdgeAuthToken = typia.createValidate<EdgeAuthToken>();
 export const assertEventPayload   = typia.createAssert<EventPayload>();
 export const validateEventPayload = typia.createValidate<EventPayload>();
+export const assertSyncPayload    = typia.createAssert<SyncPayload>();
+export const validateSyncPayload  = typia.createValidate<SyncPayload>();

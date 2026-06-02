@@ -1,6 +1,6 @@
 import 'server-only';
-import { createGCounter, increment, value } from '../delta-crdt';
-import type { GCounter, CounterDelta } from '../delta-crdt';
+import { createGCounter, increment, merge, value } from '../delta-crdt';
+import type { GCounter, CounterDelta, NodeId } from '../delta-crdt';
 
 export type MetricName = 'page_views' | 'api_calls' | 'events_processed' | 'errors';
 
@@ -8,10 +8,18 @@ const METRIC_NAMES: readonly MetricName[] = [
   'page_views', 'api_calls', 'events_processed', 'errors',
 ];
 
+function isMetricName(name: string): name is MetricName {
+  return (METRIC_NAMES as readonly string[]).includes(name);
+}
+
 interface MetricEntry {
   counter: GCounter;
   history: Array<{ ts: number; val: number }>;
 }
+
+// Per-metric wire shape: { [nodeId]: count }. A SyncSnapshot carries every metric.
+export type MetricStateWire = Record<NodeId, number>;
+export type SyncSnapshot = Partial<Record<MetricName, MetricStateWire>>;
 
 const NODE_ID = process.env.HOSTNAME ?? 'node-0';
 const MAX_HISTORY = 60;
@@ -27,6 +35,13 @@ function getOrCreate(metric: MetricName): MetricEntry {
   return entry;
 }
 
+function pushHistory(entry: MetricEntry, current: number): void {
+  entry.history.push({ ts: Date.now(), val: current });
+  if (entry.history.length > MAX_HISTORY) {
+    entry.history.shift();
+  }
+}
+
 export function recordEvent(metric: MetricName, count = 1): CounterDelta {
   const entry = getOrCreate(metric);
   let [counter, lastDelta] = increment(entry.counter);
@@ -34,11 +49,7 @@ export function recordEvent(metric: MetricName, count = 1): CounterDelta {
     [counter, lastDelta] = increment(counter);
   }
   entry.counter = counter;
-  const current = value(counter);
-  entry.history.push({ ts: Date.now(), val: current });
-  if (entry.history.length > MAX_HISTORY) {
-    entry.history.shift();
-  }
+  pushHistory(entry, value(counter));
   return lastDelta;
 }
 
@@ -50,6 +61,35 @@ export function getMetrics(): Record<MetricName, number> {
 
 export function getHistory(metric: MetricName): Array<{ ts: number; val: number }> {
   return [...getOrCreate(metric).history];
+}
+
+// Export the full per-node state for every metric — used for gossip / partition recovery.
+export function exportSnapshot(): SyncSnapshot {
+  const snapshot: SyncSnapshot = {};
+  for (const name of METRIC_NAMES) {
+    snapshot[name] = Object.fromEntries(getOrCreate(name).counter.state);
+  }
+  return snapshot;
+}
+
+// Merge a remote node's snapshot into local state via the G-Counter's
+// max-per-node merge (commutative + idempotent). Returns the converged snapshot.
+// Unknown metric keys in the remote payload are ignored.
+export function mergeRemoteSnapshot(remote: SyncSnapshot): SyncSnapshot {
+  for (const [name, remoteState] of Object.entries(remote)) {
+    if (!isMetricName(name) || remoteState === undefined) continue;
+    const entry = getOrCreate(name);
+    const remoteCounter: GCounter = {
+      nodeId: 'remote',
+      state: new Map(
+        Object.entries(remoteState).map(([node, n]) => [node, Number(n)])
+      ),
+    };
+    // merge keeps the local nodeId; only counts reconcile upward.
+    entry.counter = merge(entry.counter, remoteCounter);
+    pushHistory(entry, value(entry.counter));
+  }
+  return exportSnapshot();
 }
 
 export function _resetForTesting(): void {

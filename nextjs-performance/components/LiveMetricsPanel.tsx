@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from 'react';
 type MetricName = 'page_views' | 'api_calls' | 'events_processed' | 'errors';
 type MetricsSnapshot = Record<MetricName, number>;
 
+const METRIC_KEYS: MetricName[] = ['page_views', 'api_calls', 'events_processed', 'errors'];
+
 const LABELS: Record<MetricName, string> = {
   page_views: 'Page Views',
   api_calls: 'API Calls',
@@ -19,11 +21,36 @@ const COLORS: Record<MetricName, string> = {
   errors: '#ef4444',
 };
 
+// Simulated remote regions — each keeps its own monotonic per-metric counter.
+const SIM_REGIONS = ['region-eu-west', 'region-ap-south'] as const;
+
+const buttonStyle = (bg: string, disabled: boolean): React.CSSProperties => ({
+  padding: '0.4rem 1rem',
+  background: bg,
+  color: 'white',
+  border: 'none',
+  borderRadius: '6px',
+  cursor: disabled ? 'not-allowed' : 'pointer',
+  opacity: disabled ? 0.6 : 1,
+  fontSize: '0.8rem',
+  fontWeight: 500,
+});
+
 export default function LiveMetricsPanel() {
   const [metrics, setMetrics] = useState<MetricsSnapshot | null>(null);
   const [connected, setConnected] = useState(false);
   const [firing, setFiring] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Monotonic per-region, per-metric contributions held client-side so each
+  // "Simulate Region" click advances the regions' own G-Counter entries.
+  const regionRef = useRef<Record<MetricName, Record<string, number>>>({
+    page_views: {},
+    api_calls: {},
+    events_processed: {},
+    errors: {},
+  });
 
   useEffect(() => {
     let es: EventSource;
@@ -72,31 +99,42 @@ export default function LiveMetricsPanel() {
     }
   }
 
+  async function simulateRegion() {
+    setSyncing(true);
+    try {
+      const regionState = regionRef.current;
+      // Advance each region's own counters monotonically, then gossip full state.
+      for (const region of SIM_REGIONS) {
+        for (const key of METRIC_KEYS) {
+          const bump = Math.floor(Math.random() * 6);
+          const current = regionState[key][region] ?? 0;
+          regionState[key][region] = current + bump;
+        }
+      }
+      await fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nodeId: 'browser-sim', metrics: regionState }),
+      });
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         <span style={{ fontSize: '0.875rem', color: connected ? '#10b981' : '#94a3b8' }}>
           {connected ? '● Live' : '○ Connecting...'}
         </span>
-        <button
-          onClick={() => { void fireEvents(); }}
-          disabled={firing}
-          style={{
-            padding: '0.4rem 1rem',
-            background: '#3b82f6',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: firing ? 'not-allowed' : 'pointer',
-            opacity: firing ? 0.6 : 1,
-            fontSize: '0.8rem',
-            fontWeight: 500,
-          }}
-        >
+        <button onClick={() => { void fireEvents(); }} disabled={firing} style={buttonStyle('#3b82f6', firing)}>
           {firing ? 'Firing...' : '⚡ Fire Events'}
         </button>
+        <button onClick={() => { void simulateRegion(); }} disabled={syncing} style={buttonStyle('#8b5cf6', syncing)}>
+          {syncing ? 'Syncing...' : '🌍 Simulate Region'}
+        </button>
         <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-          Increments CRDT counters via POST /api/events
+          Fire → local events · Simulate → merge 2 remote regions via POST /api/sync
         </span>
       </div>
 
