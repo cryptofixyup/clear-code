@@ -1,5 +1,9 @@
 import { defineConfig } from 'vitest/config';
+import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+
+// fileURLToPath pattern works on Node 18+; import.meta.dirname requires Node 22+
+const rootDir = fileURLToPath(new URL('.', import.meta.url));
 
 export default defineConfig({
   test: {
@@ -8,10 +12,10 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['lib/**/*.ts'],
-      exclude: ['lib/server/**'], // server-only modules need Next.js runtime
+      exclude: ['lib/server/**'], // server-only modules require the Next.js runtime
     },
   },
   resolve: {
-    alias: { '@': path.resolve(import.meta.dirname, '.') },
+    alias: { '@': path.resolve(rootDir, '.') },
   },
 });

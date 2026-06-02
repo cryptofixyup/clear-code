@@ -1,0 +1,86 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Health Check API",
+    "version": "1.0.0",
+    "description": "Memory health endpoint for the Next.js 15+ performance showcase. Designed to be called by Kubernetes liveness probes and fluid-compute idle cycles."
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "summary": "Process memory health check",
+        "description": "Returns RSS and heap metrics. Triggers manual GC (stop-the-world) when RSS > 1.5 GB if the server was started with --expose-gc. Returns HTTP 503 when RSS > 1.8 GB so Kubernetes can restart the pod before an OOM kill.",
+        "responses": {
+          "200": {
+            "description": "Process is healthy",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HealthResponse" },
+                "example": {
+                  "status": "ok",
+                  "rssGb": "0.42",
+                  "heapUsedMb": "128.3",
+                  "heapTotalMb": "256.0",
+                  "externalMb": "12.1",
+                  "gcTriggered": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Memory pressure — RSS exceeded the 1.8 GB threshold",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HealthResponse" },
+                "example": {
+                  "status": "memory_pressure",
+                  "rssGb": "1.91",
+                  "heapUsedMb": "512.0",
+                  "heapTotalMb": "1024.0",
+                  "externalMb": "48.0",
+                  "gcTriggered": true
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "required": ["status", "rssGb", "heapUsedMb", "heapTotalMb", "externalMb", "gcTriggered"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["ok", "memory_pressure"],
+            "description": "ok when RSS is below 1.8 GB; memory_pressure otherwise"
+          },
+          "rssGb": {
+            "type": "string",
+            "description": "Resident Set Size in gigabytes, formatted to 2 decimal places",
+            "example": "0.42"
+          },
+          "heapUsedMb": {
+            "type": "string",
+            "description": "V8 heap used in megabytes, formatted to 1 decimal place"
+          },
+          "heapTotalMb": {
+            "type": "string",
+            "description": "V8 heap total in megabytes, formatted to 1 decimal place"
+          },
+          "externalMb": {
+            "type": "string",
+            "description": "External (C++ objects bound to JS) memory in megabytes"
+          },
+          "gcTriggered": {
+            "type": "boolean",
+            "description": "Whether manual global.gc() was invoked during this request"
+          }
+        }
+      }
+    }
+  }
+}

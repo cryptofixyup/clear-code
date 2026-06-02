@@ -5,91 +5,80 @@ import {
   createMemoryMonitor,
 } from '../lib/memory-health.js';
 
+const BASE_USAGE = {
+  heapTotal: 100 * 1024 * 1024,
+  heapUsed:  50  * 1024 * 1024,
+  external:  1   * 1024 * 1024,
+  arrayBuffers: 0,
+};
+
 describe('checkMemoryPressure', () => {
+  afterEach(() => vi.restoreAllMocks());
+
   it('returns a snapshot with positive numeric fields', () => {
     const snap = checkMemoryPressure();
-    expect(typeof snap.rssBytes).toBe('number');
-    expect(typeof snap.heapUsedBytes).toBe('number');
-    expect(typeof snap.heapTotalBytes).toBe('number');
-    expect(typeof snap.externalBytes).toBe('number');
-    expect(typeof snap.shouldGc).toBe('boolean');
     expect(snap.rssBytes).toBeGreaterThan(0);
     expect(snap.heapUsedBytes).toBeGreaterThan(0);
+    expect(snap.heapTotalBytes).toBeGreaterThan(0);
+    expect(typeof snap.shouldGc).toBe('boolean');
   });
 
   it('shouldGc is false under normal test-process memory', () => {
-    // Test processes are far below the 1.5GB threshold
     expect(checkMemoryPressure().shouldGc).toBe(false);
   });
 
-  it('shouldGc is true when RSS is above the threshold', () => {
-    const real = process.memoryUsage;
-    process.memoryUsage = () => ({
-      ...real.call(process),
-      rss: 2 * 1024 ** 3, // 2GB — above 1.5GB threshold
+  it('shouldGc is true when RSS exceeds 1.5 GB', () => {
+    vi.spyOn(process, 'memoryUsage').mockReturnValueOnce({
+      ...BASE_USAGE,
+      rss: 2 * 1024 ** 3, // 2 GB
     });
-    try {
-      expect(checkMemoryPressure().shouldGc).toBe(true);
-    } finally {
-      process.memoryUsage = real;
-    }
+    expect(checkMemoryPressure().shouldGc).toBe(true);
   });
 });
 
 describe('triggerGcIfNeeded', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
   it('returns false when global.gc is unavailable', async () => {
-    const originalGc = global.gc;
-    // @ts-expect-error — intentionally clearing gc to test the guard
-    delete global.gc;
-    try {
-      expect(await triggerGcIfNeeded()).toBe(false);
-    } finally {
-      if (originalGc) global.gc = originalGc;
-    }
+    vi.stubGlobal('gc', undefined);
+    expect(await triggerGcIfNeeded()).toBe(false);
   });
 
-  it('calls global.gc and returns true when exposed', async () => {
-    const spy = vi.fn();
-    const originalGc = global.gc;
-    // @ts-expect-error — injecting stub
-    global.gc = spy;
-    try {
-      expect(await triggerGcIfNeeded()).toBe(true);
-      expect(spy).toHaveBeenCalledOnce();
-    } finally {
-      global.gc = originalGc;
-    }
+  it('calls global.gc and returns true when --expose-gc is active', async () => {
+    const gcSpy = vi.fn();
+    vi.stubGlobal('gc', gcSpy);
+    expect(await triggerGcIfNeeded()).toBe(true);
+    expect(gcSpy).toHaveBeenCalledOnce();
   });
 });
 
 describe('createMemoryMonitor', () => {
-  beforeEach(() => { vi.useFakeTimers(); });
-  afterEach(() => { vi.useRealTimers(); });
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
   it('starts and stops without throwing', () => {
     const monitor = createMemoryMonitor({ intervalMs: 1000 });
     expect(() => { monitor.start(); monitor.stop(); }).not.toThrow();
   });
 
-  it('calls onPressure when RSS exceeds threshold', async () => {
-    const real = process.memoryUsage;
-    process.memoryUsage = () => ({ ...real.call(process), rss: 2 * 1024 ** 3 });
+  it('fires onPressure callback when RSS exceeds threshold', async () => {
+    vi.spyOn(process, 'memoryUsage').mockReturnValue({ ...BASE_USAGE, rss: 2 * 1024 ** 3 });
+    vi.stubGlobal('gc', vi.fn()); // prevent the 'GC unavailable' warning
 
     const onPressure = vi.fn();
     const monitor = createMemoryMonitor({ intervalMs: 100, onPressure });
     monitor.start();
-    await vi.advanceTimersByTimeAsync(110);
+    await vi.advanceTimersByTimeAsync(150);
     monitor.stop();
-    process.memoryUsage = real;
 
     expect(onPressure).toHaveBeenCalled();
   });
 
-  it('does not call onPressure under normal memory', async () => {
+  it('does not fire onPressure under normal memory', async () => {
     const onPressure = vi.fn();
     const monitor = createMemoryMonitor({ intervalMs: 100, onPressure });
     monitor.start();
-    await vi.advanceTimersByTimeAsync(110);
+    await vi.advanceTimersByTimeAsync(150);
     monitor.stop();
     expect(onPressure).not.toHaveBeenCalled();
   });
