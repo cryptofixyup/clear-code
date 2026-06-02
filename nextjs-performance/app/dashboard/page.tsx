@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { getMetricsForUser } from '@/lib/server/data-access-layer';
 import { WebGpuParticles } from '@/components/WebGpuParticles';
+import { WebGpuMetricsChart } from '@/components/WebGpuMetricsChart';
 import LiveMetricsPanel from '@/components/LiveMetricsPanel';
 
 export default async function DashboardPage() {
@@ -47,6 +48,15 @@ export default async function DashboardPage() {
         >
           <LiveMetricsPanel />
         </Suspense>
+      </section>
+
+      {/* GPU-rendered time-series — same storage-buffer technique as the particles,
+          one instanced line-strip per metric, interpolated between polls on the GPU. */}
+      <section style={{ marginTop: '2.5rem' }}>
+        <h2 style={{ fontSize: '0.8rem', fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '1rem' }}>
+          WebGPU Metrics Chart (live time-series)
+        </h2>
+        <WebGpuMetricsChart />
       </section>
 
       {/* WebGPU particle system — 1M particles, Render Bundles, explicit GPU cleanup */}

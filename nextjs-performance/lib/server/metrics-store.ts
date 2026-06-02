@@ -63,6 +63,13 @@ export function getHistory(metric: MetricName): Array<{ ts: number; val: number 
   return [...getOrCreate(metric).history];
 }
 
+// Full time-series for every metric — drives the WebGPU chart.
+export function getAllHistory(): Record<MetricName, Array<{ ts: number; val: number }>> {
+  return Object.fromEntries(
+    METRIC_NAMES.map((name) => [name, [...getOrCreate(name).history]])
+  ) as Record<MetricName, Array<{ ts: number; val: number }>>;
+}
+
 // Export the full per-node state for every metric — used for gossip / partition recovery.
 export function exportSnapshot(): SyncSnapshot {
   const snapshot: SyncSnapshot = {};

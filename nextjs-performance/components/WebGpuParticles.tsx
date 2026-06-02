@@ -73,6 +73,8 @@ export function WebGpuParticles() {
     const device = await adapter.requestDevice();
     const context = canvas.getContext('webgpu');
     if (!context) { device.destroy(); return; }
+    // Stable non-null binding so the rAF closure keeps the narrowed type.
+    const canvasContext = context;
 
     const format = navigator.gpu.getPreferredCanvasFormat();
     context.configure({ device, format, alphaMode: 'premultiplied' });
@@ -162,7 +164,7 @@ export function WebGpuParticles() {
 
       const renderPass = encoder.beginRenderPass({
         colorAttachments: [{
-          view: context.getCurrentTexture().createView(),
+          view: canvasContext.getCurrentTexture().createView(),
           clearValue: { r: 0.04, g: 0.04, b: 0.10, a: 1.0 },
           loadOp: 'clear',
           storeOp: 'store',

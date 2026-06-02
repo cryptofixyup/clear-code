@@ -6,6 +6,7 @@ vi.mock('server-only', () => ({}));
 import {
   _resetForTesting,
   exportSnapshot,
+  getAllHistory,
   getHistory,
   getMetrics,
   mergeRemoteSnapshot,
@@ -126,5 +127,45 @@ describe('metrics-store — multi-region sync', () => {
     const before = getMetrics().events_processed;
     mergeRemoteSnapshot(snap);
     expect(getMetrics().events_processed).toBe(before);
+  });
+});
+
+describe('metrics-store — getAllHistory (chart feed)', () => {
+  beforeEach(() => {
+    _resetForTesting();
+  });
+
+  it('returns an entry for every metric', () => {
+    const all = getAllHistory();
+    expect(Object.keys(all).sort()).toEqual(
+      ['api_calls', 'errors', 'events_processed', 'page_views']
+    );
+  });
+
+  it('returns empty series before any events', () => {
+    const all = getAllHistory();
+    expect(all.page_views).toEqual([]);
+    expect(all.errors).toEqual([]);
+  });
+
+  it('reflects recorded events as monotonic series', () => {
+    recordEvent('page_views');
+    recordEvent('page_views');
+    recordEvent('api_calls', 3);
+    const all = getAllHistory();
+    expect(all.page_views.map((p) => p.val)).toEqual([1, 2]);
+    expect(all.api_calls.at(-1)?.val).toBe(3);
+  });
+
+  it('caps each series at 60 points', () => {
+    for (let i = 0; i < 70; i++) recordEvent('errors');
+    expect(getAllHistory().errors).toHaveLength(60);
+  });
+
+  it('returns copies — mutating the result does not corrupt the store', () => {
+    recordEvent('page_views');
+    const all = getAllHistory();
+    all.page_views.push({ ts: 0, val: 999 });
+    expect(getHistory('page_views')).toHaveLength(1);
   });
 });
