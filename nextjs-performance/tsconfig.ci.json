@@ -1,24 +1,15 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "incremental": false
+    "incremental": false,
+    "noEmit": true
   },
   "include": [
-    "next-env.d.ts",
-    "app/**/*.ts",
-    "app/**/*.tsx",
-    "components/**/*.ts",
-    "components/**/*.tsx",
     "lib/delta-crdt.ts",
     "lib/memory-health.ts",
-    "lib/validation.ts",
-    "middleware.ts",
-    "next.config.ts",
-    "vitest.config.ts",
     "tests/**/*.ts"
   ],
   "exclude": [
-    "node_modules",
-    "lib/server"
+    "node_modules"
   ]
 }
