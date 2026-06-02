@@ -1,0 +1,31 @@
+{
+  "name": "nextjs-performance-showcase",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "node --expose-gc --max-old-space-size=2048 .next/standalone/server.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "next lint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "next": "^15.2.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "server-only": "^0.0.1",
+    "typia": "^7.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitest/coverage-v8": "^2.0.0",
+    "ts-patch": "^3.3.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.0.0"
+  }
+}

@@ -1,0 +1,43 @@
+name: CI — nextjs-performance showcase
+
+on:
+  push:
+    branches: [main, 'claude/**']
+    paths:
+      - 'nextjs-performance/**'
+      - '.github/workflows/ci-nextjs-performance.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'nextjs-performance/**'
+      - '.github/workflows/ci-nextjs-performance.yml'
+
+jobs:
+  test:
+    name: Test (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ['20.x', '22.x']
+    defaults:
+      run:
+        working-directory: nextjs-performance
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Patch TypeScript for Typia transforms
+        run: npx ts-patch install
+
+      - name: Type check (excludes server-only modules requiring Next.js runtime)
+        run: npx tsc --noEmit --project tsconfig.ci.json
+
+      - name: Unit tests
+        run: npm test
