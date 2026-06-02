@@ -33,6 +33,9 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Patch TypeScript for Typia transforms
+        run: npx ts-patch install
+
       - name: Type check
         run: npm run typecheck
 
