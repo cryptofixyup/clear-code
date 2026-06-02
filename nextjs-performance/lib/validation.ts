@@ -37,6 +37,15 @@ export interface EdgeAuthToken {
   scope: string[];
 }
 
+// Event ingestion payload — validated at the API boundary before touching the CRDT store
+export type MetricEventName = 'page_views' | 'api_calls' | 'events_processed' | 'errors';
+
+export interface EventPayload {
+  event: MetricEventName;
+  count?: number & tags.Minimum<1> & tags.Maximum<100> & tags.Type<'uint32'>;
+  source?: string & tags.MinLength<1> & tags.MaxLength<32>;
+}
+
 // ---------------------------------------------------------------------------
 // Compiled validators — these are replaced at build time with optimized code
 // ---------------------------------------------------------------------------
@@ -47,16 +56,5 @@ export const assertUserProfile    = typia.createAssert<UserProfile>();
 export const validateUserProfile  = typia.createValidate<UserProfile>();
 export const assertEdgeAuthToken  = typia.createAssert<EdgeAuthToken>();
 export const validateEdgeAuthToken = typia.createValidate<EdgeAuthToken>();
-
-// ---------------------------------------------------------------------------
-// Edge-auth fallback: @zod/mini for contexts where bundle size dominates
-// (e.g., Cloudflare Workers with <1MB limit). ~5.5KB vs typia's 0KB overhead.
-// ---------------------------------------------------------------------------
-//
-// import { z } from '@zod/mini';
-// export const edgeTokenSchema = z.object({
-//   sub: z.string(),
-//   exp: z.number(),
-//   iat: z.number(),
-//   scope: z.array(z.string()),
-// });
+export const assertEventPayload   = typia.createAssert<EventPayload>();
+export const validateEventPayload = typia.createValidate<EventPayload>();
