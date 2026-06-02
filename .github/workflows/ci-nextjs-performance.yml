@@ -36,8 +36,8 @@ jobs:
       - name: Patch TypeScript for Typia transforms
         run: npx ts-patch install
 
-      - name: Type check
-        run: npm run typecheck
+      - name: Type check (excludes server-only modules requiring Next.js runtime)
+        run: npx tsc --noEmit --project tsconfig.ci.json
 
       - name: Unit tests
         run: npm test
