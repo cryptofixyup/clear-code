@@ -26,6 +26,23 @@ const MAX_HISTORY = 60;
 
 const store = new Map<MetricName, MetricEntry>();
 
+// Change listeners — the persistence layer subscribes to schedule snapshot
+// saves. Keeping this here (rather than importing persistence directly) leaves
+// the store free of any I/O dependency and trivially unit-testable.
+type Listener = () => void;
+const listeners = new Set<Listener>();
+
+export function subscribe(listener: Listener): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+function notify(): void {
+  for (const listener of listeners) listener();
+}
+
 function getOrCreate(metric: MetricName): MetricEntry {
   let entry = store.get(metric);
   if (entry === undefined) {
@@ -50,6 +67,7 @@ export function recordEvent(metric: MetricName, count = 1): CounterDelta {
   }
   entry.counter = counter;
   pushHistory(entry, value(counter));
+  notify();
   return lastDelta;
 }
 
@@ -96,9 +114,11 @@ export function mergeRemoteSnapshot(remote: SyncSnapshot): SyncSnapshot {
     entry.counter = merge(entry.counter, remoteCounter);
     pushHistory(entry, value(entry.counter));
   }
+  notify();
   return exportSnapshot();
 }
 
 export function _resetForTesting(): void {
   store.clear();
+  listeners.clear();
 }

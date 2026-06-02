@@ -11,6 +11,7 @@ import {
   getMetrics,
   mergeRemoteSnapshot,
   recordEvent,
+  subscribe,
 } from '../lib/server/metrics-store';
 
 describe('metrics-store', () => {
@@ -167,5 +168,44 @@ describe('metrics-store — getAllHistory (chart feed)', () => {
     const all = getAllHistory();
     all.page_views.push({ ts: 0, val: 999 });
     expect(getHistory('page_views')).toHaveLength(1);
+  });
+});
+
+describe('metrics-store — change subscription (persistence hook)', () => {
+  beforeEach(() => {
+    _resetForTesting();
+  });
+
+  it('notifies subscribers on recordEvent', () => {
+    const listener = vi.fn();
+    subscribe(listener);
+    recordEvent('page_views');
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('notifies subscribers on mergeRemoteSnapshot', () => {
+    const listener = vi.fn();
+    subscribe(listener);
+    mergeRemoteSnapshot({ api_calls: { 'node-1': 3 } });
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops notifying after unsubscribe', () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribe(listener);
+    recordEvent('errors');
+    unsubscribe();
+    recordEvent('errors');
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('supports multiple independent subscribers', () => {
+    const a = vi.fn();
+    const b = vi.fn();
+    subscribe(a);
+    subscribe(b);
+    recordEvent('events_processed');
+    expect(a).toHaveBeenCalledTimes(1);
+    expect(b).toHaveBeenCalledTimes(1);
   });
 });
