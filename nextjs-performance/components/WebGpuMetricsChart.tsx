@@ -194,7 +194,7 @@ export function WebGpuMetricsChart() {
         const encoder = device.createCommandEncoder();
         const pass = encoder.beginRenderPass({
           colorAttachments: [{
-            view: context.getCurrentTexture().createView(),
+            view: context!.getCurrentTexture().createView(),
             clearValue: { r: 0.04, g: 0.04, b: 0.10, a: 1 },
             loadOp: 'clear',
             storeOp: 'store',
