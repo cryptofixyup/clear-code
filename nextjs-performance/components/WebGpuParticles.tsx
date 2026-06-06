@@ -21,8 +21,9 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   if (i >= arrayLength(&particles)) { return; }
   var p = particles[i];
   p.pos = p.pos + p.vel * 0.016;
-  // Wrap at [-1, 1] boundary — branchless mod
-  p.pos = ((p.pos + 1.0) % 2.0) - 1.0;
+  // Wrap at [-1, 1] boundary. WGSL % keeps the sign of the dividend, so add
+  // 2.0 before the second mod to guarantee a non-negative intermediate value.
+  p.pos = (((p.pos + 1.0) % 2.0) + 2.0) % 2.0 - 1.0;
   particles[i] = p;
 }
 `;
@@ -61,16 +62,18 @@ export function WebGpuParticles() {
   const frameRef  = useRef<number>(0);
   const cleanupRef = useRef<(() => void) | null>(null);
 
-  const init = useCallback(async (canvas: HTMLCanvasElement) => {
+  const init = useCallback(async (canvas: HTMLCanvasElement, isCancelled: () => boolean) => {
     if (!navigator.gpu) {
       console.warn('[WebGPU] navigator.gpu unavailable — requires Chrome 113+ or Firefox Nightly');
       return;
     }
 
     const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
-    if (!adapter) return;
+    if (isCancelled() || !adapter) return;
 
     const device = await adapter.requestDevice();
+    if (isCancelled()) { device.destroy(); return; }
+
     const context = canvas.getContext('webgpu');
     if (!context) { device.destroy(); return; }
     // Stable non-null binding so the rAF closure keeps the narrowed type.
@@ -140,6 +143,9 @@ export function WebGpuParticles() {
       }),
     ]);
 
+    // Guard after the longest await: pipeline compilation can take hundreds of ms.
+    if (isCancelled()) { storageBuffer.destroy(); device.destroy(); return; }
+
     const bindGroup = device.createBindGroup({
       layout: bindGroupLayout,
       entries: [{ binding: 0, resource: { buffer: storageBuffer } }],
@@ -191,8 +197,15 @@ export function WebGpuParticles() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    init(canvas);
-    return () => { cleanupRef.current?.(); cleanupRef.current = null; };
+    // cancelled flag lets the async init abort mid-pipeline-compilation on
+    // unmount (React StrictMode double-invokes effects; quick nav hits this too).
+    let cancelled = false;
+    init(canvas, () => cancelled);
+    return () => {
+      cancelled = true;
+      cleanupRef.current?.();
+      cleanupRef.current = null;
+    };
   }, [init]);
 
   return (

@@ -16,8 +16,10 @@ export interface MemorySnapshot {
   shouldGc: boolean;
 }
 
-// Trigger GC when RSS exceeds this threshold; 503 when it exceeds 1.8 GB
-const RSS_GC_THRESHOLD_BYTES = 1.5 * 1024 ** 3;
+// Trigger GC when RSS exceeds this threshold; 503 when it exceeds 1.8 GB.
+// Override via MEMORY_GC_THRESHOLD_BYTES for containers with lower memory limits.
+const RSS_GC_THRESHOLD_BYTES =
+  parseInt(process.env.MEMORY_GC_THRESHOLD_BYTES ?? '', 10) || 1.5 * 1024 ** 3;
 
 export function checkMemoryPressure(): MemorySnapshot {
   const usage = process.memoryUsage();
