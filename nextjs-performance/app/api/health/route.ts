@@ -14,17 +14,22 @@ export async function GET(): Promise<NextResponse> {
     gcTriggered = await triggerGcIfNeeded();
   }
 
+  // Re-snapshot after GC so status reflects the recovered state rather than
+  // the pre-GC RSS that triggered collection — avoids spurious 503s from
+  // transient spikes that GC already reclaimed.
+  const snapshot = gcTriggered ? checkMemoryPressure() : pressure;
+
   // 503 signals the load balancer to stop routing traffic; Kubernetes will
   // restart the pod rather than OOM-killing it mid-request.
-  const httpStatus = pressure.rssBytes > 1.8 * 1024 ** 3 ? 503 : 200;
+  const httpStatus = snapshot.rssBytes > 1.8 * 1024 ** 3 ? 503 : 200;
 
   return NextResponse.json(
     {
       status: httpStatus === 200 ? 'ok' : 'memory_pressure',
-      rssGb: (pressure.rssBytes / 1024 ** 3).toFixed(2),
-      heapUsedMb: (pressure.heapUsedBytes / 1024 ** 2).toFixed(1),
-      heapTotalMb: (pressure.heapTotalBytes / 1024 ** 2).toFixed(1),
-      externalMb: (pressure.externalBytes / 1024 ** 2).toFixed(1),
+      rssGb: (snapshot.rssBytes / 1024 ** 3).toFixed(2),
+      heapUsedMb: (snapshot.heapUsedBytes / 1024 ** 2).toFixed(1),
+      heapTotalMb: (snapshot.heapTotalBytes / 1024 ** 2).toFixed(1),
+      externalMb: (snapshot.externalBytes / 1024 ** 2).toFixed(1),
       gcTriggered,
     },
     { status: httpStatus },
