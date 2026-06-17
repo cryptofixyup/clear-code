@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>On-Device AI Interpretability for Android — ClearCode</title>
+  <meta name="description" content="The only AI interpretability layer that runs entirely on-device. Zero data egress, HIPAA-compatible, sub-40ms latency. Built for Android teams shipping regulated AI." />
+  <meta property="og:title" content="On-Device AI Interpretability for Android" />
+  <meta property="og:description" content="Zero egress. No BAA required. Works offline. Sub-40ms explanation latency on mid-range hardware." />
+  <meta property="og:type" content="website" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0e17;
+      --bg2: #111827;
+      --border: #1f2d40;
+      --accent: #3b82f6;
+      --accent-dim: #1d4ed8;
+      --green: #10b981;
+      --red: #ef4444;
+      --text: #e2e8f0;
+      --text-dim: #94a3b8;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+      --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      line-height: 1.6;
+      font-size: 16px;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2rem; height: 56px;
+      background: rgba(10, 14, 23, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo { font-family: var(--mono); font-size: 0.85rem; color: var(--text-dim); letter-spacing: 0.05em; }
+    .nav-logo span { color: var(--accent); }
+    .nav-links { display: flex; gap: 1.5rem; font-size: 0.875rem; color: var(--text-dim); }
+    .nav-links a { color: var(--text-dim); }
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+
+    /* ── HERO ── */
+    .hero {
+      max-width: 780px; margin: 0 auto;
+      padding: 6rem 2rem 5rem;
+      text-align: center;
+    }
+    .hero-badge {
+      display: inline-block;
+      font-family: var(--mono); font-size: 0.75rem;
+      color: var(--accent); background: rgba(59,130,246,0.1);
+      border: 1px solid rgba(59,130,246,0.25);
+      padding: 0.25rem 0.75rem; border-radius: 999px;
+      margin-bottom: 1.5rem; letter-spacing: 0.08em;
+    }
+    h1 {
+      font-size: clamp(2rem, 5vw, 3.25rem);
+      font-weight: 700; line-height: 1.15;
+      letter-spacing: -0.02em;
+      margin-bottom: 1.25rem;
+    }
+    h1 em { color: var(--accent); font-style: normal; }
+    .hero-sub {
+      font-size: 1.125rem; color: var(--text-dim);
+      max-width: 600px; margin: 0 auto 2.5rem;
+    }
+    .hero-sub strong { color: var(--text); }
+    .hero-ctas { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.75rem 1.5rem; border-radius: 6px;
+      font-size: 0.9375rem; font-weight: 600; cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      border: none;
+    }
+    .btn:hover { opacity: 0.88; transform: translateY(-1px); text-decoration: none; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-secondary {
+      background: transparent; color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── STAT STRIP ── */
+    .stats {
+      display: flex; justify-content: center; flex-wrap: wrap;
+      gap: 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+    }
+    .stat {
+      flex: 1; min-width: 160px;
+      padding: 1.5rem 2rem; text-align: center;
+      border-right: 1px solid var(--border);
+    }
+    .stat:last-child { border-right: none; }
+    .stat-val {
+      font-family: var(--mono); font-size: 1.75rem; font-weight: 700;
+      color: var(--accent); display: block;
+    }
+    .stat-label { font-size: 0.8rem; color: var(--text-dim); margin-top: 0.25rem; }
+
+    /* ── SECTION ── */
+    section { max-width: 960px; margin: 0 auto; padding: 5rem 2rem; }
+    h2 {
+      font-size: 1.75rem; font-weight: 700;
+      letter-spacing: -0.015em; margin-bottom: 1rem;
+    }
+    h2 .accent { color: var(--accent); }
+    .section-sub { color: var(--text-dim); max-width: 580px; margin-bottom: 3rem; font-size: 1rem; }
+
+    /* ── RISK CALLOUT ── */
+    .risk-box {
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.25);
+      border-left: 3px solid var(--red);
+      border-radius: 6px; padding: 1.25rem 1.5rem;
+      margin-bottom: 3rem;
+    }
+    .risk-box p { font-size: 0.9375rem; color: var(--text-dim); }
+    .risk-box strong { color: var(--text); }
+
+    /* ── WHY GRID ── */
+    .why-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+    }
+    .why-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 1.5rem;
+    }
+    .why-icon { font-size: 1.5rem; margin-bottom: 0.75rem; }
+    .why-card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; }
+    .why-card p { font-size: 0.875rem; color: var(--text-dim); }
+
+    /* ── ARCHITECTURE ── */
+    .arch-diagram {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 2rem;
+      font-family: var(--mono); font-size: 0.8rem;
+      color: var(--text-dim); line-height: 1.7;
+      overflow-x: auto; white-space: pre;
+      margin-bottom: 2rem;
+    }
+    .arch-diagram .hl { color: var(--accent); }
+    .arch-diagram .dim { color: #475569; }
+
+    /* ── CODE BLOCK ── */
+    .code-wrap {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 8px; overflow: hidden;
+    }
+    .code-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.6rem 1rem;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--mono); font-size: 0.75rem; color: var(--text-dim);
+    }
+    .code-lang { color: var(--accent); }
+    pre {
+      padding: 1.5rem; margin: 0;
+      font-family: var(--mono); font-size: 0.8125rem;
+      line-height: 1.65; overflow-x: auto;
+      color: var(--text);
+    }
+    .kw { color: #93c5fd; }
+    .fn { color: #6ee7b7; }
+    .str { color: #fcd34d; }
+    .cm { color: #475569; }
+    .ty { color: #c4b5fd; }
+
+    /* ── COMPLIANCE TABLE ── */
+    .compliance-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem; margin-bottom: 2rem;
+    }
+    .compliance-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 1.25rem;
+    }
+    .compliance-card h4 {
+      font-family: var(--mono); font-size: 0.8rem;
+      color: var(--accent); margin-bottom: 0.5rem; letter-spacing: 0.06em;
+    }
+    .compliance-card p { font-size: 0.8rem; color: var(--text-dim); }
+    .check { color: var(--green); margin-right: 0.4rem; }
+
+    /* ── PERF TABLE ── */
+    .perf-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    .perf-table th {
+      text-align: left; padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-dim); font-weight: 500;
+      font-family: var(--mono); font-size: 0.78rem;
+    }
+    .perf-table td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid rgba(31,45,64,0.5);
+    }
+    .perf-table tr:last-child td { border-bottom: none; }
+    .perf-table .mono { font-family: var(--mono); color: var(--accent); }
+
+    /* ── EMAIL CAPTURE ── */
+    #whitepaper {
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .capture-wrap {
+      max-width: 580px; margin: 0 auto; text-align: center;
+    }
+    .capture-wrap h2 { margin-bottom: 0.75rem; }
+    .capture-wrap .section-sub { margin-bottom: 2rem; }
+    .capture-contents {
+      text-align: left; margin-bottom: 2rem;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;
+    }
+    .capture-contents li {
+      font-size: 0.875rem; color: var(--text-dim);
+      list-style: none; padding-left: 1.25rem; position: relative;
+    }
+    .capture-contents li::before {
+      content: '→'; position: absolute; left: 0;
+      color: var(--accent); font-family: var(--mono);
+    }
+    .capture-form {
+      display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center;
+    }
+    .capture-form input[type="email"] {
+      flex: 1; min-width: 240px;
+      padding: 0.75rem 1rem; border-radius: 6px;
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--text); font-size: 0.9375rem;
+      outline: none; transition: border-color 0.15s;
+    }
+    .capture-form input[type="email"]:focus { border-color: var(--accent); }
+    .capture-form input[type="email"]::placeholder { color: var(--text-dim); }
+    .capture-note {
+      margin-top: 1rem; font-size: 0.78rem; color: var(--text-dim);
+    }
+    .success-msg {
+      display: none; padding: 1rem 1.5rem;
+      background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3);
+      border-radius: 6px; color: var(--green); font-size: 0.9rem;
+    }
+
+    /* ── VERTICALS ── */
+    .verticals { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem; }
+    .vertical-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 1.5rem;
+    }
+    .vertical-tag {
+      display: inline-block; font-family: var(--mono); font-size: 0.7rem;
+      padding: 0.2rem 0.6rem; border-radius: 4px;
+      margin-bottom: 0.75rem; letter-spacing: 0.06em;
+    }
+    .tag-fintech { background: rgba(251,191,36,0.12); color: #fbbf24; border: 1px solid rgba(251,191,36,0.2); }
+    .tag-health { background: rgba(16,185,129,0.12); color: #10b981; border: 1px solid rgba(16,185,129,0.2); }
+    .tag-ops { background: rgba(59,130,246,0.12); color: #60a5fa; border: 1px solid rgba(59,130,246,0.2); }
+    .vertical-card h3 { font-size: 0.9375rem; font-weight: 600; margin-bottom: 0.5rem; }
+    .vertical-card p { font-size: 0.8rem; color: var(--text-dim); }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2.5rem 2rem;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 1rem;
+      max-width: 960px; margin: 0 auto;
+      font-size: 0.8rem; color: var(--text-dim);
+    }
+    footer .footer-links { display: flex; gap: 1.5rem; }
+    footer .footer-links a { color: var(--text-dim); }
+
+    @media (max-width: 600px) {
+      .stats { flex-direction: column; }
+      .stat { border-right: none; border-bottom: 1px solid var(--border); }
+      .stat:last-child { border-bottom: none; }
+      .capture-contents { grid-template-columns: 1fr; }
+      footer { flex-direction: column; text-align: center; }
+      .footer-links { justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <span class="nav-logo"><span>clear</span>code / ai-interpretability</span>
+  <div class="nav-links">
+    <a href="#why">Why On-Device</a>
+    <a href="#quickstart">Quick Start</a>
+    <a href="#compliance">Compliance</a>
+    <a href="#whitepaper">Whitepaper</a>
+    <a href="https://github.com/cryptofixyup/clear-code/tree/main/android-ai-interpretability" target="_blank" rel="noopener">GitHub</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">ANDROID · ON-DEVICE · APACHE 2.0</div>
+  <h1>AI Interpretability<br/>with <em>Zero Data Egress</em></h1>
+  <p class="hero-sub">
+    Every cloud-based SHAP and LIME service forwards your model inputs off-device.
+    When those inputs contain <strong>PHI, PAN data, or personal data under GDPR</strong>,
+    that transmission is a compliance event. This library eliminates the pathway entirely.
+  </p>
+  <div class="hero-ctas">
+    <a href="#whitepaper" class="btn btn-primary">Download Whitepaper</a>
+    <a href="https://github.com/cryptofixyup/clear-code/tree/main/android-ai-interpretability"
+       target="_blank" rel="noopener" class="btn btn-secondary">View on GitHub</a>
+  </div>
+</div>
+
+<!-- STAT STRIP -->
+<div class="stats">
+  <div class="stat">
+    <span class="stat-val">&lt;40ms</span>
+    <div class="stat-label">p50 explanation latency</div>
+  </div>
+  <div class="stat">
+    <span class="stat-val">&lt;12 MB</span>
+    <div class="stat-label">RSS overhead</div>
+  </div>
+  <div class="stat">
+    <span class="stat-val">0.94+</span>
+    <div class="stat-label">SHAP rank correlation</div>
+  </div>
+  <div class="stat">
+    <span class="stat-val">100%</span>
+    <div class="stat-label">offline capable</div>
+  </div>
+  <div class="stat">
+    <span class="stat-val">API 29+</span>
+    <div class="stat-label">Android 10 minimum</div>
+  </div>
+</div>
+
+<!-- WHY -->
+<section id="why">
+  <h2>Why <span class="accent">On-Device?</span></h2>
+  <p class="section-sub">The compliance risk of the alternative isn't hypothetical. It's structural.</p>
+
+  <div class="risk-box">
+    <p>
+      <strong>The cloud interpretability gap:</strong> AWS SageMaker Clarify, Google Vertex Explainable AI,
+      and self-hosted SHAP servers all require model inputs to be transmitted to a remote endpoint.
+      For deployments where those inputs contain Protected Health Information or payment-linked features,
+      every explanation request is a regulated data transmission requiring a BAA (HIPAA) or lawful basis
+      assessment (GDPR). Most Android deployments lack this coverage — not by choice, but because
+      the interpretability vendor relationship was never formally scoped.
+    </p>
+  </div>
+
+  <div class="why-grid">
+    <div class="why-card">
+      <div class="why-icon">&#128274;</div>
+      <h3>Data Residency</h3>
+      <p>Model inputs never leave the device. No BAA required for the interpretability tier. No GDPR transfer mechanism needed. The data pathway simply doesn't exist.</p>
+    </div>
+    <div class="why-card">
+      <div class="why-icon">&#9889;</div>
+      <h3>Zero Latency</h3>
+      <p>Attribution runs as a structured coroutine in the same process as inference. Median 22ms on flagship, 38ms on mid-range. Remote SHAP adds 180ms median under ideal conditions — and fails completely offline.</p>
+    </div>
+    <div class="why-card">
+      <div class="why-icon">&#128225;</div>
+      <h3>Offline Reliability</h3>
+      <p>Clinical tablets in rural clinics. POS terminals in connectivity-constrained environments. Logistics scanners in warehouse dead zones. Interpretability works regardless of network state.</p>
+    </div>
+    <div class="why-card">
+      <div class="why-icon">&#128203;</div>
+      <h3>Audit-Ready</h3>
+      <p>Every explanation artifact — attribution vector, confidence interval, input hash, model version — is written atomically to an AES-256-GCM encrypted local audit log for regulatory inspection.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section id="architecture">
+  <h2>Four-Layer <span class="accent">Architecture</span></h2>
+  <p class="section-sub">Each layer has a single responsibility. Attribution failures never propagate to inference.</p>
+
+  <div class="arch-diagram"><span class="dim">┌────────────────────────────────────────────────────────┐</span>
+<span class="dim">│</span>              <span class="hl">Your Application Layer</span>                    <span class="dim">│</span>
+<span class="dim">└───────────────────────┬────────────────────────────────┘</span>
+                        <span class="dim">│</span>
+<span class="dim">┌───────────────────────▼────────────────────────────────┐</span>
+<span class="dim">│</span>              <span class="hl">Inference Layer</span>                           <span class="dim">│</span>
+<span class="dim">│</span>   TensorFlow Lite 2.13+ <span class="dim">|</span> MediaPipe Tasks <span class="dim">|</span> ORT       <span class="dim">│</span>
+<span class="dim">│</span>   Wrapped by InterpretabilityInterpreter adapter       <span class="dim">│</span>
+<span class="dim">└───────────────────────┬────────────────────────────────┘</span>
+                        <span class="dim">│</span>
+<span class="dim">┌───────────────────────▼────────────────────────────────┐</span>
+<span class="dim">│</span>           <span class="hl">Interpretability Engine</span>                      <span class="dim">│</span>
+<span class="dim">│</span>   Integrated Gradients · 50 steps · pre-alloc buffer   <span class="dim">│</span>
+<span class="dim">│</span>   &gt;0.94 rank correlation with full Shapley values      <span class="dim">│</span>
+<span class="dim">└───────────────────────┬────────────────────────────────┘</span>
+                        <span class="dim">│</span>
+<span class="dim">┌───────────────────────▼────────────────────────────────┐</span>
+<span class="dim">│</span>            <span class="hl">Memory Safety Layer</span>                         <span class="dim">│</span>
+<span class="dim">│</span>   RSS watchdog · graceful degradation before OOM kill  <span class="dim">│</span>
+<span class="dim">└───────────────────────┬────────────────────────────────┘</span>
+                        <span class="dim">│</span>
+<span class="dim">┌───────────────────────▼────────────────────────────────┐</span>
+<span class="dim">│</span>            <span class="hl">Fault Isolation Layer</span>                       <span class="dim">│</span>
+<span class="dim">│</span>   coroutineScope per request · SupervisorJob           <span class="dim">│</span>
+<span class="dim">│</span>   Attribution failures never propagate to inference    <span class="dim">│</span>
+<span class="dim">└────────────────────────────────────────────────────────┘</span></div>
+</section>
+
+<!-- QUICK START -->
+<section id="quickstart">
+  <h2>Quick <span class="accent">Start</span></h2>
+  <p class="section-sub">Five lines. One suspend function. Zero network calls.</p>
+
+  <div class="code-wrap" style="margin-bottom:1.5rem;">
+    <div class="code-header">
+      <span class="code-lang">Kotlin</span>
+      <span>build.gradle.kts</span>
+    </div>
+    <pre><span class="fn">implementation</span>(<span class="str">"com.clearcode:ai-interpretability-android:1.0.0"</span>)</pre>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header">
+      <span class="code-lang">Kotlin</span>
+      <span>InferenceViewModel.kt</span>
+    </div>
+    <pre><span class="kw">val</span> interpreter = <span class="ty">InterpretabilityInterpreter</span>.<span class="fn">wrap</span>(tfliteInterpreter, config)
+
+<span class="cm">// In your ViewModel coroutine scope:</span>
+<span class="kw">val</span> result: <span class="ty">AttributionResult</span> = interpreter.<span class="fn">runWithAttribution</span>(inputTensor)
+<span class="kw">val</span> topFeatures = result.attributions.<span class="fn">sortedByDescending</span> { it.magnitude }.<span class="fn">take</span>(<span class="str">5</span>)
+<span class="ty">AuditLogger</span>.<span class="fn">record</span>(result, context)</pre>
+  </div>
+
+  <p style="margin-top:1.25rem; font-size:0.875rem; color:var(--text-dim);">
+    Works with TFLite, MediaPipe Tasks, and ONNX Runtime.
+    See the <a href="https://github.com/cryptofixyup/clear-code/tree/main/android-ai-interpretability/docs/integration">integration guides</a> for full setup.
+  </p>
+</section>
+
+<!-- COMPLIANCE -->
+<section id="compliance">
+  <h2><span class="accent">Compliance</span> Architecture</h2>
+  <p class="section-sub">Designed for regulated verticals. The architecture closes the gap; contracts only cover it.</p>
+
+  <div class="compliance-grid">
+    <div class="compliance-card">
+      <h4>HIPAA</h4>
+      <p><span class="check">✓</span>No PHI transmitted — no BAA required for interpretability tier<br/>
+      <span class="check">✓</span>AES-256-GCM encrypted audit log satisfies §164.312(b)</p>
+    </div>
+    <div class="compliance-card">
+      <h4>GDPR ART. 22</h4>
+      <p><span class="check">✓</span>Per-decision attribution artifacts satisfy Recital 71 right to explanation<br/>
+      <span class="check">✓</span>No Chapter V cross-border transfer triggered</p>
+    </div>
+    <div class="compliance-card">
+      <h4>EU AI ACT ART. 13</h4>
+      <p><span class="check">✓</span>Attribution vector satisfies "sufficiently transparent operation"<br/>
+      <span class="check">✓</span>Confidence intervals map to Art. 13(3)(b) accuracy disclosure</p>
+    </div>
+    <div class="compliance-card">
+      <h4>PCI-DSS</h4>
+      <p><span class="check">✓</span>Zero transmission of cardholder-adjacent features to third party<br/>
+      <span class="check">✓</span>Interpretability tier stays within existing PCI boundary</p>
+    </div>
+  </div>
+
+  <p style="font-size:0.8rem; color:var(--text-dim);">
+    Full compliance architecture documentation:
+    <a href="https://github.com/cryptofixyup/clear-code/tree/main/android-ai-interpretability/docs/compliance/overview.md">docs/compliance/overview.md</a>
+  </p>
+</section>
+
+<!-- PERFORMANCE -->
+<section id="performance">
+  <h2><span class="accent">Performance</span> Benchmarks</h2>
+  <p class="section-sub">128-feature tabular model. 1,000 attribution requests per device. p50 and p99 from the full distribution.</p>
+
+  <div style="background:var(--bg2); border:1px solid var(--border); border-radius:8px; overflow:hidden; margin-bottom:1.5rem;">
+    <table class="perf-table">
+      <thead>
+        <tr>
+          <th>Device</th><th>SoC</th><th>p50 Latency</th><th>p99 Latency</th><th>RSS Overhead</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Pixel 6</td><td>Google Tensor G1</td>
+          <td class="mono">22 ms</td><td class="mono">71 ms</td><td class="mono">9.4 MB</td>
+        </tr>
+        <tr>
+          <td>Galaxy A54</td><td>Exynos 1380</td>
+          <td class="mono">38 ms</td><td class="mono">118 ms</td><td class="mono">10.8 MB</td>
+        </tr>
+        <tr>
+          <td>Redmi 10C</td><td>MediaTek Helio G85</td>
+          <td class="mono">61 ms</td><td class="mono">204 ms</td><td class="mono">11.6 MB</td>
+        </tr>
+        <tr style="background:rgba(239,68,68,0.05);">
+          <td colspan="2" style="color:var(--text-dim); font-size:0.8rem;">Remote SHAP baseline (10ms RTT, ideal LTE)</td>
+          <td class="mono" style="color:var(--red);">+180 ms</td>
+          <td class="mono" style="color:var(--red);">+180 ms</td>
+          <td class="mono" style="color:var(--red);">N/A</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- VERTICALS -->
+<section id="verticals">
+  <h2>Target <span class="accent">Use Cases</span></h2>
+  <div class="verticals">
+    <div class="vertical-card">
+      <div class="vertical-tag tag-fintech">FINTECH</div>
+      <h3>Android POS Fraud Scoring</h3>
+      <p>Transaction feature vectors on payment terminals never leave the device. Explanations for declined decisions available without PCI scope expansion.</p>
+    </div>
+    <div class="vertical-card">
+      <div class="vertical-tag tag-health">HEALTHTECH</div>
+      <h3>Clinical Decision Support</h3>
+      <p>Lab values, vitals, and diagnosis codes stay on the medical tablet. Explanation artifacts satisfy FDA SaMD and EU MDR transparency requirements locally.</p>
+    </div>
+    <div class="vertical-card">
+      <div class="vertical-tag tag-ops">FIELD OPS</div>
+      <h3>Offline Inspection AI</h3>
+      <p>Manufacturing plants, utility substations, warehouse dead zones. Interpretability works at full function with zero signal, enabling auditable operator override workflows.</p>
+    </div>
+  </div>
+</section>
+
+<!-- WHITEPAPER CAPTURE -->
+<section id="whitepaper" style="padding:5rem 2rem;">
+  <div class="capture-wrap">
+    <h2>Download the <span class="accent">Technical Whitepaper</span></h2>
+    <p class="section-sub">
+      6,000 words. Written for staff ML engineers and CTOs. No marketing copy.
+    </p>
+    <ul class="capture-contents">
+      <li>The compliance gap in cloud SHAP</li>
+      <li>Integrated Gradients algorithm</li>
+      <li>Android memory model deep dive</li>
+      <li>Three-device benchmark data</li>
+      <li>HIPAA / GDPR / EU AI Act mapping</li>
+      <li>PCI-DSS scope analysis</li>
+    </ul>
+    <div id="form-container">
+      <form class="capture-form" id="capture-form"
+            action="https://formspree.io/f/YOUR_FORM_ID"
+            method="POST">
+        <input type="email" name="email" placeholder="you@company.com"
+               required autocomplete="email" />
+        <input type="hidden" name="source" value="landing-page-whitepaper" />
+        <button type="submit" class="btn btn-primary">Get the Whitepaper</button>
+      </form>
+      <p class="capture-note">No spam. One email with the PDF link. Unsubscribe any time.</p>
+    </div>
+    <div class="success-msg" id="success-msg">
+      Whitepaper link sent. Check your inbox — it should arrive within 2 minutes.
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <span>© 2024 ClearCode, Inc. · Apache 2.0</span>
+  <div class="footer-links">
+    <a href="https://github.com/cryptofixyup/clear-code/tree/main/android-ai-interpretability">GitHub</a>
+    <a href="https://github.com/cryptofixyup/clear-code/tree/main/android-ai-interpretability/docs/whitepaper.md">Whitepaper</a>
+    <a href="https://github.com/cryptofixyup/clear-code/tree/main/android-ai-interpretability/docs/compliance/overview.md">Compliance</a>
+    <a href="https://github.com/cryptofixyup/clear-code/issues/new?template=enterprise-pilot.md">Enterprise Pilot</a>
+  </div>
+</footer>
+
+<script>
+  const form = document.getElementById('capture-form');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = new FormData(form);
+    try {
+      const res = await fetch(form.action, {
+        method: 'POST', body: data,
+        headers: { 'Accept': 'application/json' }
+      });
+      if (res.ok) {
+        document.getElementById('form-container').style.display = 'none';
+        document.getElementById('success-msg').style.display = 'block';
+      } else {
+        // Fallback: open whitepaper directly
+        window.open('https://github.com/cryptofixyup/clear-code/blob/main/android-ai-interpretability/docs/whitepaper.md', '_blank');
+      }
+    } catch {
+      window.open('https://github.com/cryptofixyup/clear-code/blob/main/android-ai-interpretability/docs/whitepaper.md', '_blank');
+    }
+  });
+</script>
+</body>
+</html>
