@@ -577,7 +577,7 @@
       <p class="capture-note">No spam. One email with the PDF link. Unsubscribe any time.</p>
     </div>
     <div class="success-msg" id="success-msg">
-      Whitepaper link sent. Check your inbox — it should arrive within 2 minutes.
+      Your PDF should be opening now. If it didn't, <a href="https://raw.githubusercontent.com/cryptofixyup/clear-code/main/android-ai-interpretability/docs/whitepaper.pdf" style="color:var(--green);">download it here</a>.
     </div>
   </div>
 </section>
@@ -599,6 +599,7 @@
     e.preventDefault();
     const data = new FormData(form);
     try {
+      const WHITEPAPER_URL = 'https://raw.githubusercontent.com/cryptofixyup/clear-code/main/android-ai-interpretability/docs/whitepaper.pdf';
       const res = await fetch(form.action, {
         method: 'POST', body: data,
         headers: { 'Accept': 'application/json' }
@@ -606,12 +607,15 @@
       if (res.ok) {
         document.getElementById('form-container').style.display = 'none';
         document.getElementById('success-msg').style.display = 'block';
+        // Open PDF immediately; Formspree can also be configured to email the link
+        window.open(WHITEPAPER_URL, '_blank');
       } else {
-        // Fallback: open whitepaper directly
-        window.open('https://github.com/cryptofixyup/clear-code/blob/main/android-ai-interpretability/docs/whitepaper.md', '_blank');
+        // Formspree not yet configured — deliver PDF directly
+        window.open(WHITEPAPER_URL, '_blank');
       }
     } catch {
-      window.open('https://github.com/cryptofixyup/clear-code/blob/main/android-ai-interpretability/docs/whitepaper.md', '_blank');
+      const WHITEPAPER_URL = 'https://raw.githubusercontent.com/cryptofixyup/clear-code/main/android-ai-interpretability/docs/whitepaper.pdf';
+      window.open(WHITEPAPER_URL, '_blank');
     }
   });
 </script>
